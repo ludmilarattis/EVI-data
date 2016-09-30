@@ -1,0 +1,21 @@
+#cleaning workspace
+rm(list=ls(all=TRUE))
+#setting work directory (Spera)
+setwd("//CANASTRA/smb-publico/data_geo/Base_raster/Matopiba_Latlong/Spera_tang_latlong")
+#reading Spera's land transition maps
+spera.230<-stack(list.files(pattern='.tif'))
+#setting working directory (MODIS)
+setwd("//CANASTRA/smb-publico/MODIS_local/MATOPIBA/MATOPIBA - EVI_NDVI")
+
+#listing all the mosaic files
+a<-list.files(pattern='.tif')
+#reading mosaic files as a RasterStack
+mos<-stack(a)
+#cropping EVI mosaics based on Spera's extent
+mos.2<-crop(mos,spera.230) #para a Tanguro
+spera<-resample(spera.230,mos.2,method='ngb')
+limite<-rasterToPolygons(spera[[1]], dissolve=TRUE)
+mos.3<-crop(mos.2,limite)
+mos.4<-mask(mos.3,limite)
+plot(mos.4[[1:4]])
+mos.factor<-mos.4*0.0001;plot(mos.factor[[1:9]])
