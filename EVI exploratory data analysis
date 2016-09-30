@@ -1,0 +1,138 @@
+soja<-stack("soja.tif")
+soja[soja==0]<-NA
+df.soja <- as.data.frame(cellStats(soja, median))
+head(df.soja)
+df.soja2 <- data.frame(df.soja, do.call(rbind, strsplit(row.names(df.soja), "[.]")))
+head(df.soja2)
+df.soja2$Date <-  as.POSIXlt(with(df.soja2, 
+                                  paste(X2,X3,X4, sep="/")), 
+                             format = "%Y/%m/%d")
+head(df.soja2)
+df.soja2$Julian <- as.numeric(as.character(format(df.soja2$Date, "%j")))
+df.soja2$area_plantada <- rep(area.soja.ha,each=23)[c(-310:-322)]
+names(df.soja2) <- c("m.evi", "ignore", "year", "month", "day","Date","Julian","area_plantada")
+df.soja2$days<-1:309
+#criar uma coluna de dias agricolas e refazer o ggplot abaixo
+#com os dias agricolas no eixo x
+agri.day<-rep(seq(1,365,by=16),14);agri.day<-agri.day[-c(310:322)]
+df.soja2$agri.day=agri.day
+
+write.table(df.soja2,"df.soja2.txt",sep=',',col.names=TRUE)
+
+ggplot(df.soja2, aes(x = agri.day, y =m.evi, color = as.factor(year)))+
+  geom_point()+
+  geom_line()+
+  #  geom_smooth()+
+  theme_bw()
+
+#Standardizing median EVI, with acreage as weight
+#standardize evi by the growed area
+library(weights)
+df.soja2$m.evi_st<-stdz(df.soja2$m.evi, weight=df.soja2$area_plantada)
+ggplot(df.soja2, aes(x = agri.day, y =m.evi_st, color = as.factor(year)))+
+  geom_point()+
+  geom_line()+
+  #  geom_smooth()+
+  theme_bw()
+
+
+#fazendo radial plots apenas para um ano (no caso 2010)
+s.2010 <- subset(df.soja2, year == 2010)
+radial.plot(s.2010$m.evi, radial.pos = rad(s.2010$agri.day),
+            radlab = T,
+            clockwise = T,
+            rp.type = "p",
+            lwd = 3,
+            show.centroid = F,
+            labels = (s.2010$agri.day))
+
+#radial plot de todos os anos
+s.2010 <- with(df.soja2, tapply(m.evi_st, list(year,month), mean,na.rm=T))
+s.2010[is.na(s.2010)] = 0
+radial.plot(s.2010, radial.pos = rad(seq(0, 360, 30)),
+            radlab = F,
+            clockwise = T,
+            rp.type = "p",
+            lwd = 3,
+            show.centroid = F,
+            labels = 1:12)
+
+
+#-----------------------------------------------------------#
+#Quantile regression
+#-----------------------------------------------------------#
+library(quantreg)
+plot(df.soja2$days,df.soja2$m.evi,cex=.25,type="l",xlab="Agri day", ylab=" EVI (median)")
+points(df.soja2$days,df.soja2$m.evi,cex=.5,col="blue")
+abline(rq(df.soja2$m.evi~df.soja2$days,tau=.5),col="blue")
+abline(lm(df.soja2$m.evi~df.soja2$days),lty=2,col="red") #the dreaded ols line
+taus <- c(.05,.1,.25,.75,.90,.95)
+for( i in 1:length(taus)){
+  abline(rq(df.soja2$m.evi~df.soja2$days,tau=taus[i]),col="gray")
+}
+resu<-list()
+for( i in 1:length(taus)){
+  resu<-rq(df.soja2$m.evi~df.soja2$days,tau=taus[i])
+}
+
+summary(resu)
+
+
+library(bfastSpatial)
+setwd("//CANASTRA/smb-publico/MODIS_local/MATOPIBA/MATOPIBA - EVI_NDVI")
+#listing all the mosaic files
+a<-list.files(pattern='.tif');aa<-a[-c(1:13,346,347)]
+evi.time.stack<-timeStackMODIS(aa)
+evi.ts.tanguro<-crop(evi.time.stack,limite)
+evi.ts.tanguro<-mask(evi.ts.tanguro,limite)
+evi.ts.tanguro<-evi.ts.tanguro*0.0001
+datas= substr(names(evi.ts.tanguro), 8, 17)
+#se precisar atribuir datas aos layers...
+evi.ts.tanguro<-setZ(evi.ts.tanguro,datas)
+#annual summary
+evi.tanguro.annual<-annualSummary(evi.ts.tanguro,fun=median,dates=datas)
+plot(evi.tanguro.annual)
+#total summary
+meanVI <- summaryBrick(evi.ts.tanguro, fun=median) # na.rm=FALSE by default
+plot(meanVI)
+
+# define a function that takes a vector as an argument
+checkThresh <- function(x){
+  # first, get rid of NA's
+  x <- x[!is.na(x)]
+  # if there still values left, count how many are above the threshold
+  # otherwise, return a 0
+  if(length(x) > 0){
+    y <- length(x[x > 0.7])
+  } else {
+    y <- 0
+  }
+  # return the value
+  return(y)
+}
+# pass this functino to summaryBrick
+customStat <- summaryBrick(evi.ts.tanguro, fun=checkThresh)
+plot(customStat, main = "# of observations where NDVI > 0.7")
+
+# median values for all layers
+medVI <- summaryBrick(evi.ts.tanguro, fun=median, na.rm=TRUE)
+
+# all layers between 2000 and 2005 (inclusive)
+medVI_00_01 <- summaryBrick(evi.ts.tanguro, fun=median, na.rm=TRUE, minDate="2000-08-28", 
+                            maxDate="2001-08-12")
+plot(medVI_00_01)
+# all layers after 2005
+medVI_06_15 <- summaryBrick(evi.ts.tanguro, fun=median, na.rm=TRUE, minDate="2006-08-29")
+# plot and compare
+op <- par(mfrow=c(2, 2))
+plot(medVI, main = "median NDVI")
+#plot(medVI_ETM, main = "only ETM+")
+plot(medVI_00_01, main = "2000-2001")
+plot(medVI_06_15, main = "2006-2015")
+
+#bfm <- bfmPixel(evi.ts.tanguro, start=c(2009, 1), interactive=TRUE)
+targcell <- 3492
+bfm <- bfmPixel(tura, cell=targcell, start=c(2009, 1))
+# inspect and plot the $bfm output
+bfm$bfm
+plot(bfm$bfm)
