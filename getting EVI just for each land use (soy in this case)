@@ -1,0 +1,56 @@
+evi.spera<-stack(spera,mos.factor)
+
+evi.2001<-mos.factor[[13:35]];evi.spera2001=stack(spera[[1]],evi.2001);names(evi.spera2001)
+evi.2002<-mos.factor[[36:58]];evi.spera2002=stack(spera[[2]],evi.2002);names(evi.spera2002)
+evi.2003<-mos.factor[[59:81]];evi.spera2003=stack(spera[[3]],evi.2003);names(evi.spera2003)
+evi.2004<-mos.factor[[82:104]];evi.spera2004=stack(spera[[4]],evi.2004);names(evi.spera2004)
+evi.2005<-mos.factor[[105:127]];evi.spera2005=stack(spera[[5]],evi.2005);names(evi.spera2005)
+evi.2006<-mos.factor[[128:150]];evi.spera2006=stack(spera[[6]],evi.2006);names(evi.spera2006)
+evi.2007<-mos.factor[[151:173]];evi.spera2007=stack(spera[[7]],evi.2007);names(evi.spera2007)
+evi.2008<-mos.factor[[174:196]];evi.spera2008=stack(spera[[8]],evi.2008);names(evi.spera2008)
+evi.2009<-mos.factor[[197:219]];evi.spera2009=stack(spera[[9]],evi.2009);names(evi.spera2009)
+evi.2010<-mos.factor[[220:242]];evi.spera2010=stack(spera[[10]],evi.2010);names(evi.spera2010)
+evi.2011<-mos.factor[[243:265]];evi.spera2011=stack(spera[[11]],evi.2011);names(evi.spera2011)
+evi.2012<-mos.factor[[266:288]];evi.spera2012=stack(spera[[12]],evi.2012);names(evi.spera2012)
+evi.2013<-mos.factor[[289:311]];evi.spera2013=stack(spera[[13]],evi.2013);names(evi.spera2013)
+evi.2015<-mos.factor[[335:344]];evi.spera2015=stack(spera[[14]],evi.2015);names(evi.spera2015)
+
+
+fun <- function(x) { x[x[[1]]!=1] <- 0; return(x) }
+
+evi.soy.2001 <- calc(evi.spera2001, fun);evi.soy.2001 = evi.soy.2001[[-1]]
+plot(evi.soy.2001)
+evi.soy.2002 <- calc(evi.spera2002, fun);evi.soy.2002 = evi.soy.2002[[-1]]
+plot(evi.soy.2002)
+evi.soy.2003 <- calc(evi.spera2003, fun);evi.soy.2003 = evi.soy.2003[[-1]]
+plot(evi.soy.2003)
+evi.soy.2004 <- calc(evi.spera2004, fun);evi.soy.2004 = evi.soy.2004[[-1]]
+plot(evi.soy.2004)
+evi.soy.2005 <- calc(evi.spera2005, fun);evi.soy.2005 = evi.soy.2005[[-1]]
+plot(evi.soy.2005)
+evi.soy.2006 <- calc(evi.spera2006, fun);evi.soy.2006 = evi.soy.2006[[-1]]
+plot(evi.soy.2006)
+evi.soy.2007 <- calc(evi.spera2007, fun);evi.soy.2007 = evi.soy.2007[[-1]]
+plot(evi.soy.2007)
+evi.soy.2008 <- calc(evi.spera2008, fun);evi.soy.2008 = evi.soy.2008[[-1]]
+plot(evi.soy.2008)
+evi.soy.2009 <- calc(evi.spera2009, fun);evi.soy.2009 = evi.soy.2009[[-1]]
+plot(evi.soy.2009)
+evi.soy.2010 <- calc(evi.spera2010, fun);evi.soy.2010 = evi.soy.2010[[-1]]
+plot(evi.soy.2010)
+evi.soy.2011 <- calc(evi.spera2011, fun);evi.soy.2011 = evi.soy.2011[[-1]]
+plot(evi.soy.2011)
+evi.soy.2012 <- calc(evi.spera2012, fun);evi.soy.2012 = evi.soy.2012[[-1]]
+plot(evi.soy.2012)
+evi.soy.2013 <- calc(evi.spera2013, fun);evi.soy.2013 = evi.soy.2013[[-1]]
+plot(evi.soy.2013)
+evi.soy.2015 <- calc(evi.spera2015, fun);evi.soy.2015 = evi.soy.2015[[-1]]
+plot(evi.soy.2015)
+
+soja <- stack(evi.soy.2001, evi.soy.2002, evi.soy.2003,
+              evi.soy.2004, evi.soy.2005, evi.soy.2006,
+              evi.soy.2007, evi.soy.2008, evi.soy.2009,
+              evi.soy.2010, evi.soy.2011, evi.soy.2012,
+              evi.soy.2013, evi.soy.2015)
+              
+writeRaster(soja,"soja.tif")              
