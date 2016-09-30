@@ -1,0 +1,173 @@
+#loading packages
+
+x<-c("rgdal","rgeos","raster","maptools","MODIS",
+     "sp","gdalUtils","breakpoint","ggplot2");lapply(x, require, character.only=T)
+
+#my pc
+
+#selecting soy cover
+setwd("//CANASTRA/smb-publico/MODIS_local/MATOPIBA/MATOPIBA - EVI_NDVI")
+soja<-raster("soja.tif")
+
+#bfastSpatial
+library(devtools)
+install_github('dutri001/bfastSpatial')
+# load the package
+library(bfastSpatial)
+
+timeStackMODIS <- function(x, pattern=NULL, ...) {
+  if(!is.character(x)){
+    stop('x must be a character (directory) or a list of characters')
+  }
+  if (length(x) == 1){
+    x <- list.files(x, pattern=pattern, full.names=TRUE)
+  }
+  
+  s <- stack(x)
+  time <- getMODISinfo(x)$date
+  s <- setZ(x=s, z=time)
+  if(hasArg(filename)) {
+    out <- writeRaster(s, ...)
+    return(out)
+  }
+  return(s)
+}
+
+getMODISinfo <- function(x) {
+  date <- as.Date(str_match(pattern='(\\.A)(\\d{7})(\\.)', basename(x))[,3], format="%Y%j")
+  data.frame(date = date) # For consistency with getSceneinfo (Landsat)    
+}
+
+setwd("//CANASTRA/smb-publico/MODIS_local/MATOPIBA/MATOPIBA - EVI_NDVI")
+#listing all the mosaic files
+a<-list.files(pattern='.tif');aa<-a[-c(1:13,346,347)]
+evi.time.stack<-timeStackMODIS(aa)
+evi.ts.tanguro<-crop(evi.time.stack,limite)
+evi.ts.tanguro<-mask(evi.ts.tanguro,limite)
+evi.ts.tanguro<-evi.ts.tanguro*0.0001
+datas= substr(names(evi.ts.tanguro), 8, 17)
+write.table(datas,"datas.txt")
+datas<-as.character(unlist(read.table("datas.txt")));datas
+require(lubridate)
+datas = as.Date(datas)
+julian<-yday(datas)
+#se precisar atribuir datas aos layers...
+evi.ts.tanguro<-setZ(evi.ts.tanguro,datas)
+datas.c<-datas[-c(310:332)]
+datas.c
+#selecting soy cover
+soja.ts<-setZ(soja,datas.c)
+
+#annual summary
+evi.tanguro.annual<-annualSummary(soja.ts,fun=median,dates=datas.c)
+plot(evi.tanguro.annual)
+plot(evi.tanguro.annual[[6]],main="2005")
+
+rgb.palette <- colorRampPalette(c("yellow","yellowgreen","green4"), space = "Lab")
+levelplot(evi.tanguro.annual[[5:14]], par.settings=BuRdTheme)
+levelplot(evi.tanguro.annual[[5:14]], col.regions=rgb.palette(120),
+          at=seq(0,0.8, length.out=50))
+levelplot(evi.tanguro.annual, col.regions=rgb.palette(120),
+          at=seq(0,0.8, length.out=50))
+
+
+
+#total summary
+meanVI <- summaryBrick(soja.ts, fun=median) # na.rm=FALSE by default
+plot(meanVI)
+
+# define a function that takes a vector as an argument
+checkThresh <- function(x){
+  # first, get rid of NA's
+  x <- x[!is.na(x)]
+  # if there still values left, count how many are above the threshold
+  # otherwise, return a 0
+  if(length(x) > 0){
+    y <- length(x[x > 0.7])
+  } else {
+    y <- 0
+  }
+  # return the value
+  return(y)
+}
+# pass this functino to summaryBrick
+customStat <- summaryBrick(soja.ts, fun=checkThresh)
+plot(customStat, main = "# of observations where EVI > 0.7")
+
+#não deu certo ainda
+#customStat <- calc(soja.ts, fun=checkThresh)
+#levelplot(customStat, par.settings=BuRdTheme)
+
+# median values for all layers
+medVI <- summaryBrick(evi.ts.tanguro, fun=median, na.rm=TRUE)
+
+# all layers between 2000 and 2005 (inclusive)
+medVI_00_01 <- summaryBrick(soja.ts, fun=median, na.rm=TRUE, minDate="2000-08-28", 
+                            maxDate="2001-04-23");plot(medVI_00_01)
+medVI_01_02 <- summaryBrick(soja.ts, fun=median, na.rm=TRUE, minDate="2001-08-28", 
+                            maxDate="2002-04-23");plot(medVI_01_02)
+medVI_02_03 <- summaryBrick(soja.ts, fun=median, na.rm=TRUE, minDate="2002-08-28", 
+                            maxDate="2003-04-23");plot(medVI_02_03)
+medVI_03_04 <- summaryBrick(soja.ts, fun=median, na.rm=TRUE, minDate="2003-08-28", 
+                            maxDate="2004-04-23");plot(medVI_03_04)
+medVI_04_05 <- summaryBrick(soja.ts, fun=median, na.rm=TRUE, minDate="2004-08-28", 
+                            maxDate="2005-04-23");plot(medVI_04_05)
+medVI_05_06 <- summaryBrick(soja.ts, fun=median, na.rm=TRUE, minDate="2005-08-28", 
+                            maxDate="2006-04-23");plot(medVI_05_06)
+medVI_06_07 <- summaryBrick(soja.ts, fun=median, na.rm=TRUE, minDate="2006-08-28", 
+                            maxDate="2007-04-23");plot(medVI_06_07)
+medVI_07_08 <- summaryBrick(soja.ts, fun=median, na.rm=TRUE, minDate="2007-08-28", 
+                            maxDate="2008-04-23");plot(medVI_07_08)
+medVI_08_09 <- summaryBrick(soja.ts, fun=median, na.rm=TRUE, minDate="2008-08-28", 
+                            maxDate="2009-04-23");plot(medVI_08_09)
+medVI_09_10 <- summaryBrick(soja.ts, fun=median, na.rm=TRUE, minDate="2009-08-28", 
+                            maxDate="2010-04-23");plot(medVI_09_10)
+medVI_10_11 <- summaryBrick(soja.ts, fun=median, na.rm=TRUE, minDate="2010-08-28", 
+                            maxDate="2011-04-23");plot(medVI_10_11)
+medVI_11_12 <- summaryBrick(soja.ts, fun=median, na.rm=TRUE, minDate="2011-08-28", 
+                            maxDate="2012-04-23");plot(medVI_11_12)
+medVI_12_13 <- summaryBrick(soja.ts, fun=median, na.rm=TRUE, minDate="2012-08-28", 
+                            maxDate="2013-04-23");plot(medVI_12_13)
+medVI_13_14 <- summaryBrick(soja.ts, fun=median, na.rm=TRUE, minDate="2013-08-28", 
+                            maxDate="2014-01-17");plot(medVI_13_14)
+
+soy.evi.med<-stack(medVI_00_01,medVI_01_02,medVI_02_03,medVI_03_04,medVI_04_05,
+                   medVI_05_06,medVI_06_07,medVI_07_08,medVI_08_09,medVI_09_10,
+                   medVI_10_11,medVI_11_12,medVI_12_13,medVI_13_14)
+                   
+names(soy.evi.med)<-c(2000:2013)
+
+levelplot(soy.evi.med,col.regions=rgb.palette(120),
+          at=seq(0,0.8, length.out=50))
+
+levelplot(soy.evi.med[[5:14]],col.regions=rgb.palette(120),
+          at=seq(0,0.8, length.out=50))
+
+
+# all layers after 2005
+medVI_06_15 <- summaryBrick(evi.ts.tanguro, fun=median, na.rm=TRUE, minDate="2006-08-29")
+# plot and compare
+op <- par(mfrow=c(2, 2))
+plot(medVI, main = "median NDVI")
+#plot(medVI_ETM, main = "only ETM+")
+plot(medVI_00_01, main = "2000-2001")
+plot(medVI_06_15, main = "2006-2015")
+
+###
+# run bfmSpatial over soja.ts for a monitoring period of 2000 - 2013
+bfm <- bfmSpatial(soja.ts, start=c(2000, 241), order=1, mc.cores=1)
+bfm.2004 <- bfmSpatial(soja.ts, 
+                  start=c(2004, 241), order=4, mc.cores=1)
+
+bfm.2004.season <- bfmSpatial(soja.ts, formula = response ~ season,
+                       start=c(2004, 241), order=4, mc.cores=1)
+
+# plot the result
+plot(bfm.2004)
+# extract change raster
+change <- raster(bfm.2004, 1)
+
+bfm09 <- bfmSpatial(soja.ts, start=c(2009, 1), monend=c(2009, 353), order=4)
+plot(bfm09)
+
+MapBreakpoints(bfm09[[1]])
