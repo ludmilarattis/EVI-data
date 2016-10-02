@@ -1,61 +1,15 @@
-#loading packages
-
-x<-c("rgdal","rgeos","raster","maptools","MODIS",
-     "sp","gdalUtils","breakpoint","ggplot2");lapply(x, require, character.only=T)
-
-#my pc
-
-#selecting soy cover
-setwd("//CANASTRA/smb-publico/MODIS_local/MATOPIBA/MATOPIBA - EVI_NDVI")
-soja<-raster("soja.tif")
-
-#bfastSpatial
-library(devtools)
-install_github('dutri001/bfastSpatial')
-# load the package
 library(bfastSpatial)
-
-timeStackMODIS <- function(x, pattern=NULL, ...) {
-  if(!is.character(x)){
-    stop('x must be a character (directory) or a list of characters')
-  }
-  if (length(x) == 1){
-    x <- list.files(x, pattern=pattern, full.names=TRUE)
-  }
-  
-  s <- stack(x)
-  time <- getMODISinfo(x)$date
-  s <- setZ(x=s, z=time)
-  if(hasArg(filename)) {
-    out <- writeRaster(s, ...)
-    return(out)
-  }
-  return(s)
-}
-
-getMODISinfo <- function(x) {
-  date <- as.Date(str_match(pattern='(\\.A)(\\d{7})(\\.)', basename(x))[,3], format="%Y%j")
-  data.frame(date = date) # For consistency with getSceneinfo (Landsat)    
-}
-
-setwd("//CANASTRA/smb-publico/MODIS_local/MATOPIBA/MATOPIBA - EVI_NDVI")
-#listing all the mosaic files
-a<-list.files(pattern='.tif');aa<-a[-c(1:13,346,347)]
-evi.time.stack<-timeStackMODIS(aa)
-evi.ts.tanguro<-crop(evi.time.stack,limite)
-evi.ts.tanguro<-mask(evi.ts.tanguro,limite)
-evi.ts.tanguro<-evi.ts.tanguro*0.0001
-datas= substr(names(evi.ts.tanguro), 8, 17)
-write.table(datas,"datas.txt")
+setwd("C:/Users/ludmi/Dropbox/IPAM/climate_agriculture/Dados/Produtividade/EVI/evi_soja")
 datas<-as.character(unlist(read.table("datas.txt")));datas
 require(lubridate)
 datas = as.Date(datas)
 julian<-yday(datas)
 #se precisar atribuir datas aos layers...
-evi.ts.tanguro<-setZ(evi.ts.tanguro,datas)
 datas.c<-datas[-c(310:332)]
 datas.c
 #selecting soy cover
+setwd("//CANASTRA/smb-publico/MODIS_local/MATOPIBA/MATOPIBA - EVI_NDVI")
+soja<-stack("soja.tif")
 soja.ts<-setZ(soja,datas.c)
 
 #annual summary
@@ -134,7 +88,6 @@ medVI_13_14 <- summaryBrick(soja.ts, fun=median, na.rm=TRUE, minDate="2013-08-28
 soy.evi.med<-stack(medVI_00_01,medVI_01_02,medVI_02_03,medVI_03_04,medVI_04_05,
                    medVI_05_06,medVI_06_07,medVI_07_08,medVI_08_09,medVI_09_10,
                    medVI_10_11,medVI_11_12,medVI_12_13,medVI_13_14)
-                   
 names(soy.evi.med)<-c(2000:2013)
 
 levelplot(soy.evi.med,col.regions=rgb.palette(120),
@@ -153,6 +106,13 @@ plot(medVI, main = "median NDVI")
 plot(medVI_00_01, main = "2000-2001")
 plot(medVI_06_15, main = "2006-2015")
 
+#doesn't work
+targcell <- 200
+bfm <- bfmPixel(evi.ts.tanguro, cell=3,start=c(2009,1))
+# inspect and plot the $bfm output
+bfm$bfm
+plot(bfm$bfm)
+
 ###
 # run bfmSpatial over soja.ts for a monitoring period of 2000 - 2013
 bfm <- bfmSpatial(soja.ts, start=c(2000, 241), order=1, mc.cores=1)
@@ -167,7 +127,28 @@ plot(bfm.2004)
 # extract change raster
 change <- raster(bfm.2004, 1)
 
+months <- changeMonth(change)
+# set up labels and colourmap for months
+monthlabs <- c("jan", "feb", "mar", "apr", "may", "jun", 
+               "jul", "aug", "sep", "oct", "nov", "dec")
+cols <- rainbow(12)
+plot(months[[c(10,5)]], col=cols, breaks=c(1:12), legend=FALSE)
+# insert custom legend
+legend("bottomright", legend=monthlabs, cex=0.5, fill=cols, ncol=2)
+
+# extract magn raster
+magn <- raster(bfm.2004, 2)
+# make a version showing only breakpoing pixels
+magn_bkp <- magn
+magn_bkp[is.na(change)] <- NA
+op <- par(mfrow=c(1, 2))
+plot(magn_bkp, main="Magnitude: breakpoints")
+plot(magn, main="Magnitude: all pixels")
+
 bfm09 <- bfmSpatial(soja.ts, start=c(2009, 1), monend=c(2009, 353), order=4)
 plot(bfm09)
 
 MapBreakpoints(bfm09[[1]])
+
+##Wavelet based Filter for determining Crop Phenology
+
